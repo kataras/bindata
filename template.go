@@ -1,33 +1,32 @@
 package bindata
 
 const tmplTypeBintree string = `
-type bintree struct {
-	Func     func() (*asset, error)
-	Children map[string]*bintree
+type gzipBintree struct {
+	Func     func() (*gzipAsset, error)
+	Children map[string]*gzipBintree
 }
 
-var _bintree = &bintree`
+var _gzipbintree = &gzipBintree`
 
-const tmplBinTreeValues string = `{Func: %s, Children: map[string]*bintree{`
+const tmplBinTreeValues string = `{Func: %s, Children: map[string]*gzipBintree{`
 
 const tmplFuncAssetDir string = `
-//
-// AssetDir returns the file names below a certain
-// directory embedded in the file by go-bindata.
-// For example if you run go-bindata on data/... and data contains the
+
+// GzipAssetDir returns the file names below a certain
+// directory embedded in the file by bindata.
+// For example if you run bindata on data/... and data contains the
 // following hierarchy:
 //     data/
 //       foo.txt
 //       img/
 //         a.png
 //         b.png
-// then AssetDir("data") would return []string{"foo.txt", "img"}
-// AssetDir("data/img") would return []string{"a.png", "b.png"}
-// AssetDir("foo.txt") and AssetDir("notexist") would return an error
-// AssetDir("") will return []string{"data"}.
-//
-func AssetDir(name string) ([]string, error) {
-	node := _bintree
+// then GzipAssetDir("data") would return []string{"foo.txt", "img"}
+// GzipAssetDir("data/img") would return []string{"a.png", "b.png"}
+// GzipAssetDir("foo.txt") and GzipAssetDir("notexist") would return an error
+// GzipAssetDir("") will return []string{"data"}.
+func GzipAssetDir(name string) ([]string, error) {
+	node := _gzipbintree
 	if len(name) != 0 {
 		cannonicalName := strings.Replace(name, "\\", "/", -1)
 		pathList := strings.Split(cannonicalName, "/")
@@ -59,67 +58,60 @@ func AssetDir(name string) ([]string, error) {
 `
 
 const tmplFuncAsset string = `
-//
-// Asset loads and returns the asset for the given name.
+
+// GzipAsset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
-//
-func Asset(name string) ([]byte, error) {
+func GzipAsset(name string) ([]byte, error) {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
-	if f, ok := _bindata[cannonicalName]; ok {
+	if f, ok := _gzipbindata[cannonicalName]; ok {
 		a, err := f()
 		if err != nil {
-			return nil, fmt.Errorf("Asset %s can't read by error: %v", name, err)
+			return nil, fmt.Errorf("GzipAsset %s can't read by error: %v", name, err)
 		}
 		return a.bytes, nil
 	}
 	return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
 }
 
-//
-// MustAsset is like Asset but panics when Asset would return an error.
+// MustGzipAsset is like GzipAsset but panics when GzipAsset would return an error.
 // It simplifies safe initialization of global variables.
 // nolint: deadcode
-//
-func MustAsset(name string) []byte {
-	a, err := Asset(name)
+func MustGzipAsset(name string) []byte {
+	a, err := GzipAsset(name)
 	if err != nil {
-		panic("asset: Asset(" + name + "): " + err.Error())
+		panic("asset: GzipAsset(" + name + "): " + err.Error())
 	}
 
 	return a
 }
 
-//
-// AssetInfo loads and returns the asset info for the given name.
+// GzipAssetInfo loads and returns the asset info for the given name.
 // It returns an error if the asset could not be found or could not be loaded.
-//
-func AssetInfo(name string) (os.FileInfo, error) {
+func GzipAssetInfo(name string) (os.FileInfo, error) {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
-	if f, ok := _bindata[cannonicalName]; ok {
+	if f, ok := _gzipbindata[cannonicalName]; ok {
 		a, err := f()
 		if err != nil {
-			return nil, fmt.Errorf("AssetInfo %s can't read by error: %v", name, err)
+			return nil, fmt.Errorf("GzipAssetInfo %s can't read by error: %v", name, err)
 		}
 		return a.info, nil
 	}
 	return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
 }
 
-//
-// AssetNames returns the names of the assets.
+// GzipAssetNames returns the names of the assets.
 // nolint: deadcode
-//
-func AssetNames() []string {
-	names := make([]string, 0, len(_bindata))
-	for name := range _bindata {
+func GzipAssetNames() []string {
+	names := make([]string, 0, len(_gzipbindata))
+	for name := range _gzipbindata {
 		names = append(names, name)
 	}
 	return names
 }
 
 //
-// _bindata is a table, holding each asset generator, mapped to its name.
+// _gzipbindata is a table, holding each asset generator, mapped to its name.
 //
-var _bindata = map[string]func() (*asset, error){
+var _gzipbindata = map[string]func() (*gzipAsset, error){
 `

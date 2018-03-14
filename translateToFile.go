@@ -51,8 +51,6 @@ func translateToFile(c *Config, toc []Asset) (err error) {
 		return err
 	}
 
-	// Write restore procedure
-	err = writeRestore(bfd)
 out:
 	return flushAndClose(fd, bfd, err)
 }

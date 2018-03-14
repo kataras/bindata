@@ -60,9 +60,9 @@ func NewAsset(path, name, realPath string, fi os.FileInfo) (a Asset) {
 	}
 
 	if len(realPath) == 0 {
-		a.Func = "bindata" + normalize(name)
+		a.Func = "gzipBindata" + normalize(name)
 	} else {
-		a.Func = "bindata" + normalize(realPath)
+		a.Func = "gzipBindata" + normalize(realPath)
 	}
 
 	return

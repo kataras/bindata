@@ -17,7 +17,7 @@ const (
 	DefPackageName = "main"
 
 	// DefOutputName define default generated file name.
-	DefOutputName = "bindata.go"
+	DefOutputName = "bindata_gzip.go"
 )
 
 // List of errors.
@@ -57,7 +57,7 @@ type Config struct {
 	Input []InputConfig
 
 	// Output defines the output file for the generated code.
-	// If left empty, this defaults to 'bindata.go' in the current
+	// If left empty, this defaults to 'bindata_gzip.go' in the current
 	// working directory and the current directory in case of having true
 	// to `Split` config.
 	Output string
@@ -66,12 +66,12 @@ type Config struct {
 	// substrings from all file names when generating the keys in the table of
 	// contents.  For example, running without the `-prefix` flag, we get:
 	//
-	// 	$ go-bindata /path/to/templates
+	// 	$ bindata /path/to/templates
 	// 	go_bindata["/path/to/templates/foo.html"] = _path_to_templates_foo_html
 	//
 	// Running with the `-prefix` flag, we get:
 	//
-	//	$ go-bindata -prefix "/.*/some/" /a/path/to/some/templates/
+	//	$ bindata -prefix "/.*/some/" /a/path/to/some/templates/
 	//	_bindata["templates/foo.html"] = templates_foo_html
 	Prefix *regexp.Regexp
 
@@ -90,60 +90,6 @@ type Config struct {
 
 	// When nonzero, use this as unix timestamp for all files.
 	ModTime int64
-
-	// When true, size, mode and modtime are not preserved from files
-	NoMetadata bool
-
-	// NoMemCopy will alter the way the output file is generated.
-	//
-	// It will employ a hack that allows us to read the file data directly from
-	// the compiled program's `.rodata` section. This ensures that when we call
-	// call our generated function, we omit unnecessary mem copies.
-	//
-	// The downside of this, is that it requires dependencies on the `reflect` and
-	// `unsafe` packages. These may be restricted on platforms like AppEngine and
-	// thus prevent you from using this mode.
-	//
-	// Another disadvantage is that the byte slice we create, is strictly read-only.
-	// For most use-cases this is not a problem, but if you ever try to alter the
-	// returned byte slice, a runtime panic is thrown. Use this mode only on target
-	// platforms where memory constraints are an issue.
-	//
-	// The default behaviour is to use the old code generation method. This
-	// prevents the two previously mentioned issues, but will employ at least one
-	// extra memcopy and thus increase memory requirements.
-	//
-	// For instance, consider the following two examples:
-	//
-	// This would be the default mode, using an extra memcopy but gives a safe
-	// implementation without dependencies on `reflect` and `unsafe`:
-	//
-	// 	func myfile() []byte {
-	// 		return []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a}
-	// 	}
-	//
-	// Here is the same functionality, but uses the `.rodata` hack.
-	// The byte slice returned from this example can not be written to without
-	// generating a runtime error.
-	//
-	// 	var _myfile = "\x89\x50\x4e\x47\x0d\x0a\x1a"
-	//
-	// 	func myfile() []byte {
-	// 		var empty [0]byte
-	// 		sx := (*reflect.StringHeader)(unsafe.Pointer(&_myfile))
-	// 		b := empty[:]
-	// 		bx := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	// 		bx.Data = sx.Data
-	// 		bx.Len = len(_myfile)
-	// 		bx.Cap = bx.Len
-	// 		return b
-	// 	}
-	NoMemCopy bool
-
-	// NoCompress means the assets are /not/ GZIP compressed before being turned
-	// into Go code. The generated function will automatically unzip
-	// the file data when called. Defaults to false.
-	NoCompress bool
 
 	// Perform a debug build. This generates an asset file, which
 	// loads the asset contents directly from disk at their original
@@ -177,9 +123,7 @@ type Config struct {
 	MD5Checksum bool
 }
 
-//
 // NewConfig returns a default configuration struct.
-//
 func NewConfig() *Config {
 	c := new(Config)
 	c.Package = DefPackageName
@@ -200,14 +144,12 @@ func (c *Config) validateInput() (err error) {
 	return
 }
 
-//
 // validateOutput will check if output is valid.
 //
 // (1) If output is empty, set the output directory to,
 // (1.1) current working directory if `split` option is used, or
 // (1.2) current working directory with default output file output name.
 // (2) If output is not empty, check the directory and file write status.
-//
 func (c *Config) validateOutput() (err error) {
 	// (1)
 	if len(c.Output) == 0 {
@@ -257,10 +199,8 @@ func (c *Config) validateOutput() (err error) {
 	return
 }
 
-//
 // validate ensures the config has sane values.
 // Part of which means checking if certain file/directory paths exist.
-//
 func (c *Config) validate() (err error) {
 	if len(c.Package) == 0 {
 		return ErrNoPackageName

@@ -1,70 +1,114 @@
-## bindata
+# Hello new `bindata` 
+
+This package is a fork of the `go-bindata`. It's optimized by [@kataras](https://twitter.com/MakisMaropoulos) to maximize the performance on the [Iris web framework](https://iris-go.com) and generally, in http web servers written with [Go](https://golang.org).
+
+This `bindata` package is **x7.887767220902613 times faster** than the original `go-bindata` in terms of web response.
+
+## Reqs/sec with [shuLhan/go-bindata](https://github.com/shuLhan/go-bindata) and alternatives
+
+![go-bindata](go-bindata-benchmark.png)
+
+## Reqs/sec with [kataras/bindata](https://github.com/kataras/iris)
+
+![bindata](bindata-benchmark.png)
+
+# Bindata
 
 This package converts any file into managable Go source code. Useful for
-embedding binary data into a go program. The file data is optionally gzip
-compressed before being converted to a raw byte slice.
+embedding binary data into a go program. The file data is gzip
+compressed before and after converted to a raw byte slice.
 
-It comes with a command line tool in the `go-bindata` sub directory.
+It comes with a command line tool in the `cmd/bindata` sub directory.
 This tool offers a set of command line options, used to customize the
 output being generated.
 
+## Installation
 
-### Installation
+The only requirement is the [Go Programming Language](https://golang.org/dl/).
 
-To install the library and command line program, use the following:
+```sh
+$ go get -u github.com/kataras/bindata/cmd/bindata
+```
 
-	go get -u github.com/shuLhan/go-bindata/...
-
-
-### Usage
+## Usage
 
 Conversion is done on one or more sets of files. They are all embedded in a new
 Go source file, along with a table of contents and an `Asset` function,
 which allows quick access to the asset, based on its name.
 
-The simplest invocation generates a `bindata.go` file in the current
+The simplest invocation generates a `bindata_gzip.go` file in the current
 working directory. It includes all assets from the `data` directory.
 
-	$ go-bindata data/
+```sh
+$ bindata ./data
+```
+
 
 To include all input sub-directories recursively, use the elipsis postfix
 as defined for Go import paths. Otherwise it will only consider assets in the
 input directory itself.
 
-	$ go-bindata data/...
+```sh
+$ bindata ./data/...
+```
 
 To specify the name of the output file being generated, we use the following:
 
-	$ go-bindata -o myfile.go data/
+```sh
+$ bindata -o data.go ./data/...
+```
 
 Multiple input directories can be specified if necessary.
 
-	$ go-bindata dir1/... /path/to/dir2/... dir3
-
+```sh
+$ bindata ./dir1/... ./path/to/dir2/...
+```
 
 The following paragraphs detail some of the command line options which can be 
-supplied to `go-bindata`. Refer to the `testdata/out` directory for various
-output examples from the assets in `testdata/in`. Each example uses different
-command line options.
+supplied to `bindata`.
 
 To ignore files, pass in regexes using -ignore, for example:
 
-    $ go-bindata -ignore=\\.gitignore data/...
+```sh
+$ bindata -ignore=\\.gitignore ./data/...
+```
 
-### Accessing an asset
+### Static Files
 
-To access asset data, we use the `Asset(string) ([]byte, error)` function which
-is included in the generated output.
+```go
+package main
 
-	data, err := Asset("pub/style/foo.css")
-	if err != nil {
-		// Asset was not found.
-	}
+import "github.com/kataras/iris"
 
-	// use asset data
+func main() {
+    app := iris.New()
+    app.StaticEmbeddedGzip("/public", "./public", GzipAsset, GzipAssetNames)
 
+    //
+    // [...]
+    //
+}
+```
 
-### Debug vs Release builds
+### Templates
+
+Use the <https://github.com/shuLhan/go-bindata> for the templates as you used to do before the `kataras/bindata`. The `kataras/bindata` package doesn't support embedded templates, at least yet.
+
+## Accessing an asset
+
+To access asset data, we use the `GzipAsset(string) ([]byte, error)` function which
+is included in the generated output (gziped).
+
+```go
+data, err := GzipAsset("pub/style/foo.css")
+if err != nil {
+    // Asset was not found.
+}
+
+// Use asset data...
+```
+
+## Debug vs Release builds
 
 When invoking the program with the `-debug` flag, the generated code does
 not actually include the asset data. Instead, it generates function stubs
@@ -82,96 +126,27 @@ whole server and restart it every time you make a change to a bit of
 javascript. You just want to build and launch the server once. Then just press
 refresh in the browser to see those changes. Embedding the assets with the
 `debug` flag allows you to do just that. When you are finished developing and
-ready for deployment, just re-invoke `go-bindata` without the `-debug` flag.
+ready for deployment, just re-invoke `bindata` without the `-debug` flag.
 It will now embed the latest version of the assets.
 
 
-### Lower memory footprint
+## Compression
 
-Using the `-nomemcopy` flag, will alter the way the output file is generated.
-It will employ a hack that allows us to read the file data directly from
-the compiled program's `.rodata` section. This ensures that when we call
-call our generated function, we omit unnecessary memcopies.
+Gzip Compression is enabled by-default and can't change.
 
-The downside of this, is that it requires dependencies on the `reflect` and
-`unsafe` packages. These may be restricted on platforms like AppEngine and
-thus prevent you from using this mode.
+- data saved gzip compressed
+- output result is gzip compressed
 
-Another disadvantage is that the byte slice we create, is strictly read-only.
-For most use-cases this is not a problem, but if you ever try to alter the
-returned byte slice, a runtime panic is thrown. Use this mode only on target
-platforms where memory constraints are an issue.
-
-The default behaviour is to use the old code generation method. This
-prevents the two previously mentioned issues, but will employ at least one
-extra memcopy and thus increase memory requirements.
-
-For instance, consider the following two examples:
-
-This would be the default mode, using an extra memcopy but gives a safe
-implementation without dependencies on `reflect` and `unsafe`:
+For that reason, you have to include those two headers in your [Iris Handler or net/http](https://iris-go.com):
 
 ```go
-func myfile() []byte {
-    return []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a}
-}
+ctx.ResponseWriter().Header().Add("Vary", "Accept-Encoding")
+ctx.ResponseWriter().Header().Add("Content-Encoding", "gzip")
 ```
 
-Here is the same functionality, but uses the `.rodata` hack.
-The byte slice returned from this example can not be written to without
-generating a runtime error.
+## Path prefix stripping
 
-```go
-var _myfile = "\x89\x50\x4e\x47\x0d\x0a\x1a"
-
-func myfile() []byte {
-    var empty [0]byte
-    sx := (*reflect.StringHeader)(unsafe.Pointer(&_myfile))
-    b := empty[:]
-    bx := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-    bx.Data = sx.Data
-    bx.Len = len(_myfile)
-    bx.Cap = bx.Len
-    return b
-}
-```
-
-
-### Optional compression
-
-When the `-nocompress` flag is given, the supplied resource is *not* GZIP
-compressed before being turned into Go code. The data should still be accessed
-through a function call, so nothing changes in the usage of the generated file.
-
-This feature is useful if you do not care for compression, or the supplied
-resource is already compressed. Doing it again would not add any value and may
-even increase the size of the data.
-
-The default behaviour of the program is to use compression.
-
-
-### Path prefix stripping
-
-The keys used in the `_bindata` map are the same as the input file name passed
-to `go-bindata`. This includes the path. In most cases, this is not desireable,
-as it puts potentially sensitive information in your code base.  For this
-purpose, the tool supplies another command line flag `-prefix`.  This accepts a
-[regular expression](https://github.com/google/re2/wiki/Syntax) string, which
-will be used to match a portion of the map keys and function names that should
-be stripped out.
-
-For example, running without the `-prefix` flag, we get:
-
-	$ go-bindata /path/to/templates/
-
-	_bindata["/path/to/templates/foo.html"] = path_to_templates_foo_html
-
-Running with the `-prefix` flag, we get:
-
-	$ go-bindata -prefix "/.*/some/" /a/path/to/some/templates/
-
-	_bindata["templates/foo.html"] = templates_foo_html
-
+Iris manages that automatically, for both templates and static files.
 
 ### Build tags
 
@@ -182,9 +157,4 @@ format is specified at build time with the appropriate tags.
 
 The tags are appended to a `// +build` line in the beginning of the output file
 and must follow the build tags syntax specified by the go tool.
-
-### Related projects
-
-[go-bindata-assetfs](https://github.com/elazarl/go-bindata-assetfs#readme) - 
-implements `http.FileSystem` interface. Allows you to serve assets with `net/http`.
 

@@ -13,7 +13,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"unicode/utf8"
 )
 
 // writeOneFileRelease writes the release code file for each file (when splited file).
@@ -46,25 +45,11 @@ func writeRelease(w io.Writer, c *Config, toc []Asset) (err error) {
 // writeReleaseHeader writes output file headers.
 // This targets release builds.
 func writeReleaseHeader(w io.Writer, c *Config) (err error) {
-	if c.NoCompress {
-		if c.NoMemCopy {
-			_, err = fmt.Fprint(w, tmplImportNocompressNomemcopy)
-		} else {
-			_, err = fmt.Fprint(w, tmplImportNocompressMemcopy)
-		}
-	} else {
-		if c.NoMemCopy {
-			_, err = fmt.Fprint(w, tmplImportCompressNomemcopy)
-		} else {
-			_, err = fmt.Fprint(w, tmplImportCompressMemcopy)
-		}
-	}
-	if err != nil {
-		return err
+	if _, err = fmt.Fprint(w, tmplImportCompressIrisMode); err != nil {
+		return
 	}
 
 	_, err = fmt.Fprint(w, tmplReleaseHeader)
-
 	return
 }
 
@@ -77,19 +62,7 @@ func writeReleaseAsset(w io.Writer, c *Config, asset *Asset) (err error) {
 		return
 	}
 
-	if c.NoCompress {
-		if c.NoMemCopy {
-			err = nocompressNomemcopy(w, asset, fd)
-		} else {
-			err = nocompressMemcopy(w, asset, fd)
-		}
-	} else {
-		if c.NoMemCopy {
-			err = compressNomemcopy(w, asset, fd)
-		} else {
-			err = compressMemcopy(w, asset, fd)
-		}
-	}
+	err = compress(w, asset, fd)
 	if err != nil {
 		_ = fd.Close()
 		return
@@ -116,31 +89,7 @@ func sanitize(b []byte) []byte {
 	return bytes.Replace(b, []byte("\xEF\xBB\xBF"), []byte("`+\"\\xEF\\xBB\\xBF\"+`"), -1)
 }
 
-func compressNomemcopy(w io.Writer, asset *Asset, r io.Reader) (err error) {
-	_, err = fmt.Fprintf(w, "var _%s = \"\" +\n\t\"", asset.Func)
-	if err != nil {
-		return
-	}
-
-	gz := gzip.NewWriter(&StringWriter{Writer: w})
-	_, err = io.Copy(gz, r)
-	if err != nil {
-		_ = gz.Close()
-		return
-	}
-
-	err = gz.Close()
-	if err != nil {
-		return
-	}
-
-	_, err = fmt.Fprintf(w, tmplFuncCompressNomemcopy, asset.Func,
-		asset.Func, asset.Name)
-
-	return
-}
-
-func compressMemcopy(w io.Writer, asset *Asset, r io.Reader) (err error) {
+func compress(w io.Writer, asset *Asset, r io.Reader) (err error) {
 	_, err = fmt.Fprintf(w, "var _%s = []byte(\n\t\"", asset.Func)
 	if err != nil {
 		return err
@@ -158,48 +107,7 @@ func compressMemcopy(w io.Writer, asset *Asset, r io.Reader) (err error) {
 		return
 	}
 
-	_, err = fmt.Fprintf(w, tmplFuncCompressMemcopy, asset.Func,
-		asset.Func, asset.Name)
-
-	return
-}
-
-func nocompressNomemcopy(w io.Writer, asset *Asset, r io.Reader) (err error) {
-	_, err = fmt.Fprintf(w, `var _%s = "`, asset.Func)
-	if err != nil {
-		return
-	}
-
-	_, err = io.Copy(&StringWriter{Writer: w}, r)
-	if err != nil {
-		return
-	}
-
-	_, err = fmt.Fprintf(w, tmplFuncNocompressNomemcopy, asset.Func,
-		asset.Func, asset.Name)
-
-	return
-}
-
-func nocompressMemcopy(w io.Writer, asset *Asset, r io.Reader) (err error) {
-	_, err = fmt.Fprintf(w, `var _%s = []byte(`, asset.Func)
-	if err != nil {
-		return
-	}
-
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	if utf8.Valid(b) && !bytes.Contains(b, []byte{0}) {
-		fmt.Fprintf(w, "`%s`", sanitize(b))
-	} else {
-		fmt.Fprintf(w, "%+q", b)
-	}
-
-	_, err = fmt.Fprintf(w, tmplFuncNocompressMemcopy, asset.Func,
-		asset.Func)
+	_, err = fmt.Fprint(w, `")`)
 
 	return
 }
@@ -214,11 +122,6 @@ func assetReleaseCommon(w io.Writer, c *Config, asset *Asset) (err error) {
 	mode := uint(fi.Mode())
 	modTime := fi.ModTime().Unix()
 	size := fi.Size()
-	if c.NoMetadata {
-		mode = 0
-		modTime = 0
-		size = 0
-	}
 	if c.Mode > 0 {
 		mode = uint(os.ModePerm) & c.Mode
 	}

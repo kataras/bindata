@@ -66,9 +66,6 @@ func generateCommonFile(c *Config, toc []Asset) (err error) {
 		goto out
 	}
 
-	// Write restore procedure
-	err = writeRestore(bfd)
-
 out:
 	return flushAndClose(fd, bfd, err)
 }

@@ -11,14 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 
-	"github.com/shuLhan/go-bindata"
+	"github.com/kataras/bindata"
 )
 
 const (
-	appName         = "go-bindata"
+	appName         = "bindata"
 	appVersionMajor = 3
 	appVersionMinor = 3
 )
@@ -82,18 +81,6 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-func version() {
-	if len(AppVersionRev) == 0 {
-		AppVersionRev = "0"
-	}
-
-	lout.Printf("%s %d.%d.%s (Go runtime %s).\n", appName, appVersionMajor,
-		appVersionMinor, AppVersionRev, runtime.Version())
-	lout.Println("Copyright (c) 2010-2015, Jim Teeuwen.")
-
-	os.Exit(0)
-}
-
 //
 // initArgs will initialize all command line arguments.
 //
@@ -102,14 +89,10 @@ func initArgs() {
 
 	flag.Usage = usage
 
-	flag.BoolVar(&argVersion, "version", false, "Displays version information.")
 	flag.BoolVar(&cfg.Debug, "debug", cfg.Debug, "Do not embed the assets, but provide the embedding API. Contents will still be loaded from disk.")
 	flag.BoolVar(&cfg.Dev, "dev", cfg.Dev, "Similar to debug, but does not emit absolute paths. Expects a rootDir variable to already exist in the generated code's package.")
 	flag.BoolVar(&cfg.MD5Checksum, "md5checksum", cfg.MD5Checksum, "MD5 checksums will be calculated for assets.")
-	flag.BoolVar(&cfg.NoCompress, "nocompress", cfg.NoCompress, "Assets will *not* be GZIP compressed when this flag is specified.")
-	flag.BoolVar(&cfg.NoMemCopy, "nomemcopy", cfg.NoMemCopy, "Use a .rodata hack to get rid of unnecessary memcopies. Refer to the documentation to see what implications this carries.")
-	flag.BoolVar(&cfg.NoMetadata, "nometadata", cfg.NoMetadata, "Assets will not preserve size, mode, and modtime info.")
-	flag.BoolVar(&cfg.Split, "split", cfg.NoMetadata, "Split output into several files, avoiding to have a big output file.")
+	flag.BoolVar(&cfg.Split, "split", cfg.Split, "Split output into several files, avoiding to have a big output file.")
 	flag.Int64Var(&cfg.ModTime, "modtime", cfg.ModTime, "Optional modification unix timestamp override for all files.")
 	flag.StringVar(&argPrefix, "prefix", "", "Optional path prefix to strip off asset names.")
 	flag.StringVar(&cfg.Output, "o", cfg.Output, "Optional name of the output file to be generated.")
@@ -134,11 +117,6 @@ func initArgs() {
 //
 func parseArgs() (err error) {
 	flag.Parse()
-
-	// (1)
-	if argVersion {
-		version()
-	}
 
 	// (2)
 	if flag.NArg() == 0 {
