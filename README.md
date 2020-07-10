@@ -78,15 +78,21 @@ $ bindata -ignore=\\.gitignore ./data/...
 ```go
 package main
 
-import "github.com/kataras/iris"
+import "github.com/kataras/iris/v12"
 
 func main() {
     app := iris.New()
-    app.StaticEmbeddedGzip("/public", "./public", GzipAsset, GzipAssetNames)
-
-    //
+	app.HandleDir("/public", "./public", iris.DirOptions{
+		Asset:      GzipAsset,
+		AssetInfo:  GzipAssetInfo,
+		AssetNames: GzipAssetNames,
+		AssetValidator: func(ctx iris.Context, name string) bool {
+			ctx.Header("Vary", "Accept-Encoding")
+			ctx.Header("Content-Encoding", "gzip")
+			return true
+		},
+	})
     // [...]
-    //
 }
 ```
 
@@ -137,11 +143,11 @@ Gzip Compression is enabled by-default and can't change.
 - data saved gzip compressed
 - output result is gzip compressed
 
-For that reason, you have to include those two headers in your [Iris Handler or net/http](https://iris-go.com):
+For that reason, you have to include those two headers in your handlers:
 
 ```go
-ctx.ResponseWriter().Header().Add("Vary", "Accept-Encoding")
-ctx.ResponseWriter().Header().Add("Content-Encoding", "gzip")
+w.Header().Add("Vary", "Accept-Encoding")
+w.Header().Add("Content-Encoding", "gzip")
 ```
 
 ## Path prefix stripping
@@ -157,4 +163,3 @@ format is specified at build time with the appropriate tags.
 
 The tags are appended to a `// +build` line in the beginning of the output file
 and must follow the build tags syntax specified by the go tool.
-
