@@ -71,9 +71,9 @@ type Config struct {
 	//
 	// Running with the `-prefix` flag, we get:
 	//
-	//	$ bindata -prefix "/.*/some/" /a/path/to/some/templates/
+	//	$ bindata -prefix "/a/path/to/some/" /a/path/to/some/templates/
 	//	_bindata["templates/foo.html"] = templates_foo_html
-	Prefix *regexp.Regexp
+	Prefix string
 
 	// Ignores any filenames matching the regex pattern specified, e.g.
 	// path/to/file.ext will ignore only that file, or \\.gitignore

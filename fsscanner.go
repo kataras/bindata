@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 // ByName implement sort.Interface for []os.FileInfo based on Name()
@@ -75,21 +76,17 @@ func (fss *FSScanner) isIgnored(path string) bool {
 	return len(fss.cfg.Include) > 0
 }
 
-func (fss *FSScanner) cleanPrefix(path string) string {
-	if fss.cfg.Prefix == nil {
-		return path
-	}
-
-	return fss.cfg.Prefix.ReplaceAllString(path, "")
-}
-
 //
 // addAsset will add new asset based on path, realPath, and file info.  The
 // path can be a directory or file. Realpath reference to the original path if
 // path is symlink, if path is not symlink then path and realPath will be equal.
 //
 func (fss *FSScanner) addAsset(path, realPath string, fi os.FileInfo) {
-	name := fss.cleanPrefix(path)
+	name := path
+
+	if prefix := filepath.FromSlash(fss.cfg.Prefix); prefix != "" {
+		name = strings.TrimPrefix(name, prefix)
+	}
 
 	asset := NewAsset(path, name, realPath, fi)
 

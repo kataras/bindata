@@ -123,10 +123,7 @@ func parseArgs() (err error) {
 		return ErrNoInput
 	}
 
-	err = parsePrefix()
-	if err != nil {
-		return
-	}
+	parsePrefix()
 
 	err = parseIgnore()
 	if err != nil {
@@ -149,17 +146,8 @@ func parseArgs() (err error) {
 	return
 }
 
-func parsePrefix() (err error) {
-	if len(argPrefix) == 0 {
-		return
-	}
-
-	cfg.Prefix, err = regexp.Compile(argPrefix)
-	if err != nil {
-		return ErrInvalidPrefixRegex
-	}
-
-	return
+func parsePrefix() {
+	cfg.Prefix = argPrefix
 }
 
 func parseIgnore() (err error) {
